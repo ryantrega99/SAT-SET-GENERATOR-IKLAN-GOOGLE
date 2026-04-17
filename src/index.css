@@ -1,0 +1,162 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+@import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Space Grotesk", sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+  
+  --color-bg: #fcfcfc;
+  --color-card: #ffffff;
+  --color-primary: #1a73e8;
+  --color-google-blue: #1a73e8;
+  --color-google-red: #ea4335;
+  --color-google-yellow: #fbbc05;
+  --color-google-green: #34a853;
+  --color-google-grey: #70757a;
+  --color-text: #202124;
+  --color-text-muted: #5f6368;
+  --color-border: #e2e8f0;
+
+  @keyframes marquee {
+    0% { transform: translateX(0); }
+    100% { transform: translateX(-50%); }
+  }
+
+  @keyframes float {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-10px); }
+  }
+
+  @keyframes shimmer {
+    0% { background-position: -200% 0; }
+    100% { background-position: 200% 0; }
+  }
+}
+
+:root {
+  --bg: #fcfcfc;
+  --card: #ffffff;
+  --primary: #1a73e8;
+  --text: #202124;
+  --text-muted: #5f6368;
+  --border: #e2e8f0;
+}
+
+.dark {
+  --bg: #09090b;
+  --card: #0c0c0e;
+  --primary: #1a73e8;
+  --text: #fafafa;
+  --text-muted: #a1a1aa;
+  --border: #1e1e24;
+}
+
+body {
+  background-color: var(--bg);
+  color: var(--text);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+h1, h2, h3, h4, .font-display {
+  font-family: var(--font-display);
+  font-weight: 700;
+  letter-spacing: -0.03em;
+}
+
+.marquee-container {
+  overflow: hidden;
+  white-space: nowrap;
+  display: flex;
+}
+
+.marquee-content {
+  display: flex;
+  animation: marquee 20s linear infinite;
+}
+
+.grid-bg {
+  background-image: radial-gradient(circle at 1px 1px, rgba(26, 115, 232, 0.05) 1px, transparent 0);
+  background-size: 40px 40px;
+}
+
+.border-thin {
+  border: 1px solid var(--border);
+}
+
+.editorial-heading {
+  font-size: clamp(3rem, 12vw, 9rem);
+  line-height: 0.85;
+  text-transform: uppercase;
+  letter-spacing: -0.05em;
+  font-weight: 800;
+}
+
+.glass-panel {
+  @apply bg-white dark:bg-zinc-900/40 backdrop-blur-2xl border border-zinc-200/60 dark:border-zinc-800/40 shadow-sm ring-1 ring-black/[0.03] dark:ring-white/[0.02];
+}
+
+.btn-primary {
+  @apply bg-primary text-white font-bold px-5 py-3 sm:px-8 sm:py-4 rounded-xl sm:rounded-2xl hover:brightness-110 hover:shadow-xl hover:shadow-blue-500/25 transition-all active:scale-95 flex items-center justify-center gap-2 text-sm sm:text-base cursor-pointer;
+}
+
+.btn-secondary {
+  @apply bg-white dark:bg-zinc-900 text-zinc-700 dark:text-zinc-200 font-bold px-5 py-3 sm:px-8 sm:py-4 rounded-xl sm:rounded-2xl border border-zinc-200 dark:border-zinc-800 hover:bg-zinc-50 dark:hover:bg-zinc-800 hover:border-zinc-300 dark:hover:border-zinc-700 transition-all active:scale-95 flex items-center justify-center gap-2 text-sm sm:text-base cursor-pointer;
+}
+
+.input-field {
+  @apply w-full bg-white dark:bg-zinc-950/50 border border-zinc-200 dark:border-zinc-800 rounded-xl px-4 py-3 text-zinc-900 dark:text-white focus:ring-4 focus:ring-blue-500/10 focus:border-primary outline-none transition-all placeholder:text-zinc-400 dark:placeholder:text-zinc-600 text-sm sm:text-base;
+}
+
+.shimmer {
+  background: linear-gradient(90deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.2) 50%, rgba(255,255,255,0) 100%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}
+
+/* Google-style Ad Preview Classes */
+.google-ad-headline {
+  color: #1a0dab;
+  font-family: arial, sans-serif;
+}
+.dark .google-ad-headline {
+  color: #8ab4f8;
+}
+
+.google-ad-url {
+  color: #202124;
+  font-family: arial, sans-serif;
+}
+.dark .google-ad-url {
+  color: #bdc1c6;
+}
+
+.google-ad-description {
+  color: #4d5156;
+  font-family: arial, sans-serif;
+}
+.dark .google-ad-description {
+  color: #bdc1c6;
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #a1a1aa;
+}
