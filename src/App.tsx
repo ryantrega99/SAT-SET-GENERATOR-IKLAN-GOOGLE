@@ -356,7 +356,7 @@ export default function App() {
       return;
     }
 
-    if (!userData.isPro && userData.generationCount >= 1) {
+    if (!userData.isPro && userData.generationCount >= 1 && !userSettings.geminiKey) {
       setShowUpgradeModal(true);
       return;
     }
@@ -909,13 +909,15 @@ export default function App() {
 
         <div className="p-6 border-t border-zinc-200 dark:border-zinc-800/50 space-y-6">
             <div className="bg-zinc-100 dark:bg-zinc-800/50 rounded-2xl p-4 border border-zinc-200 dark:border-zinc-700/50">
-            {userData?.isPro ? (
+            {userData?.isPro || userSettings.geminiKey ? (
               <div className="space-y-2">
                 <div className="flex items-center gap-2 text-blue-500">
                   <Zap className="w-4 h-4 fill-current" />
-                  <span className="text-[10px] font-black uppercase tracking-widest">PRO Active</span>
+                  <span className="text-[10px] font-black uppercase tracking-widest">{userSettings.geminiKey ? 'Custom API Key' : 'PRO Active'}</span>
                 </div>
-                <p className="text-[10px] text-zinc-500 font-medium">Nikmati akses tanpa batas ke semua fitur SatSet.AI.</p>
+                <p className="text-[10px] text-zinc-500 font-medium">
+                  {userSettings.geminiKey ? 'Akses tanpa batas aktif via API Key sendiri.' : 'Nikmati akses tanpa batas ke semua fitur SatSet.AI.'}
+                </p>
               </div>
             ) : (
               <>
@@ -1452,7 +1454,7 @@ export default function App() {
                         />
                       </div>
                       <p className="text-[10px] text-zinc-500 leading-relaxed italic px-1">
-                        *Jika dikosongkan, aplikasi akan menggunakan API Key default sistem (kuota terbatas).
+                        *Gunakan API Key sendiri untuk mendapatkan akses <b>Unlimited</b> (tanpa batas) secara gratis. 
                       </p>
                     </div>
 
@@ -1646,7 +1648,7 @@ export default function App() {
                 {[
                       {label: 'Total Generasi', value: userData?.generationCount || 0, icon: Sparkles, color: 'text-blue-500'},
                       {label: 'Kampanye Aktif', value: history.length, icon: Rocket, color: 'text-green-500'},
-                      {label: 'Sisa Kuota', value: userData?.isPro ? '∞' : Math.max(0, 1 - (userData?.generationCount || 0)), icon: Zap, color: 'text-yellow-500'}
+                      {label: 'Sisa Kuota', value: (userData?.isPro || userSettings.geminiKey) ? '∞' : Math.max(0, 1 - (userData?.generationCount || 0)), icon: Zap, color: 'text-yellow-500'}
                 ].map((stat, i) => (
                   <div key={i} className="glass-panel p-8 rounded-[32px] space-y-4">
                     <div className="flex items-center justify-between">
@@ -1768,6 +1770,21 @@ export default function App() {
                     <MessageSquare className="w-6 h-6" />
                     Beli Kode via WA • 49k
                   </a>
+
+                  <div className="pt-4 border-t border-zinc-100 dark:border-zinc-800">
+                    <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-4">Punya Gemini API Key?</p>
+                    <button 
+                      onClick={() => {
+                        setShowUpgradeModal(false);
+                        setActiveTab('settings');
+                      }}
+                      className="w-full py-3 border border-zinc-200 dark:border-zinc-800 rounded-xl text-xs font-bold text-zinc-600 dark:text-zinc-400 hover:bg-zinc-50 dark:hover:bg-zinc-900 transition-all flex items-center justify-center gap-2"
+                    >
+                      <Zap className="w-4 h-4 text-yellow-500" />
+                      Gunakan API Key Sendiri (Unlimit)
+                    </button>
+                  </div>
+
                   <button onClick={() => setShowUpgradeModal(false)} className="w-full py-2 text-zinc-500 font-bold hover:text-zinc-900 dark:hover:text-white transition-colors text-xs uppercase tracking-widest">Mungkin Nanti</button>
                 </div>
               </div>

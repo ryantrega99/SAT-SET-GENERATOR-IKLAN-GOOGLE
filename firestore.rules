@@ -24,17 +24,21 @@ service cloud.firestore {
     function isValidCampaign(data) {
       return data.userId == request.auth.uid
         && data.businessName is string && data.businessName.size() <= 200
-        && data.result is map
-        && data.timestamp is number;
+        && data.keywords is map
+        && data.headlines is list
+        && data.descriptions is list
+        && data.sitelinks is list
+        && data.timestamp is number
+        && (!('tone' in data) || data.tone is string);
     }
 
     // 1. & 4. Match Blocks
     match /users/{userId} {
-      allow get: if isOwner(userId);
-      allow create: if isOwner(userId) && isValidUser(incoming()) 
+      allow get: if isValidId(userId) && isOwner(userId);
+      allow create: if isValidId(userId) && isOwner(userId) && isValidUser(incoming()) 
                      && incoming().keys().hasAll(['email', 'isPro', 'generationCount'])
                      && incoming().keys().size() >= 3;
-      allow update: if isOwner(userId) && isValidUser(incoming()) && (
+      allow update: if isValidId(userId) && isOwner(userId) && isValidUser(incoming()) && (
         // Identity protection: cannot change email or userId
         incoming().email == existing().email 
         && (
@@ -47,10 +51,10 @@ service cloud.firestore {
     }
 
     match /campaigns/{campaignId} {
-      allow get: if isSignedIn() && isOwner(existing().userId);
+      allow get: if isValidId(campaignId) && isSignedIn() && isOwner(existing().userId);
       allow list: if isSignedIn() && resource.data.userId == request.auth.uid;
-      allow create: if isSignedIn() && isOwner(incoming().userId) && isValidCampaign(incoming());
-      allow delete: if isSignedIn() && isOwner(existing().userId);
+      allow create: if isValidId(campaignId) && isSignedIn() && isOwner(incoming().userId) && isValidCampaign(incoming());
+      allow delete: if isValidId(campaignId) && isSignedIn() && isOwner(existing().userId);
     }
   }
 }
