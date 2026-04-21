@@ -105,9 +105,9 @@ app.post("/api/generate", async (req, res) => {
   }
 
   try {
-    const genAI = new (GoogleGenAI as any)(apiKey);
+    const genAI = new (GoogleGenAI as any)({ apiKey });
     const model = genAI.getGenerativeModel({ 
-      model: "gemini-2.0-flash",
+      model: "gemini-1.5-flash",
       systemInstruction: "Anda adalah Senior Performance Copywriter Indonesia yang ahli dalam psikologi pembeli. Gaya bahasa Anda santai, persuasif, 'to the point', dan SANGAT MANUSIAWI. Anda benci bahasa formal yang kaku dan klise AI. Anda selalu mematuhi batasan karakter Google Ads (Headline 30, Deskripsi 90).",
     });
 
@@ -256,4 +256,8 @@ async function startServer() {
   });
 }
 
-startServer();
+if (process.env.NODE_ENV !== "production") {
+  startServer();
+}
+
+export default app;
