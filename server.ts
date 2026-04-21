@@ -115,6 +115,52 @@ app.post("/api/pro/activate", (req, res) => {
   }
 });
 
+app.post("/api/generate", async (req, res) => {
+  try {
+    const { businessInfo, userApiKey } = req.body;
+    const apiKey = userApiKey || process.env.GEMINI_API_KEY;
+
+    if (!apiKey) {
+      return res.status(400).json({ 
+        error: "Gemini API Key tidak ditemukan. SIlakan masukkan API Key Anda di Pengaturan atau hubungi admin." 
+      });
+    }
+
+    const genAI = new GoogleGenAI(apiKey);
+    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+
+    const toneInstruction = businessInfo.tone 
+      ? `Gunakan gaya bahasa: ${businessInfo.tone}.` 
+      : "Gunakan gaya bahasa: Santai dan Persuasif.";
+
+    const prompt = `
+      Riset dan buatlah kampanye Google Search Network (GSN) untuk bisnis berikut:
+      Bisnis: ${businessInfo.name}
+      Deskripsi: ${businessInfo.description}
+      Target: ${businessInfo.audience}
+      ${businessInfo.url ? `URL: ${businessInfo.url}` : ""}
+      ${toneInstruction}
+      Format output harus JSON murni.
+      JSON SCHEMA:
+      {
+        "keywords": { "broad": string[], "phrase": string[], "exact": string[] },
+        "headlines": string[],
+        "descriptions": string[],
+        "sitelinks": { "title": string, "description": string }[]
+      }
+    `;
+
+    const result = await model.generateContent(prompt);
+    const response = await result.response;
+    let text = response.text();
+    text = text.replace(/```json/g, "").replace(/```/g, "").trim();
+    res.json(JSON.parse(text));
+  } catch (error: any) {
+    console.error("Server AI generation error:", error);
+    res.status(500).json({ error: error.message || "Gagal melakukan generasi AI" });
+  }
+});
+
 app.post("/api/google-ads/publish", async (req, res) => {
   const tokensStr = req.cookies.google_ads_tokens;
   if (!tokensStr) {
