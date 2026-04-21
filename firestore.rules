@@ -14,49 +14,16 @@ service cloud.firestore {
     function isValidId(id) { return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$'); }
     
     // 2. Validation Blueprints
-    function isValidUser(data) {
-      return data.email is string && data.email.size() > 3 && data.email.size() < 256
-        && (!('isPro' in data) || data.isPro is bool)
-        && (!('generationCount' in data) || (data.generationCount is number && data.generationCount >= 0))
-        && (!('hasUsedDemoCode' in data) || data.hasUsedDemoCode is bool);
-    }
-
-    function isValidCampaign(data) {
-      return data.userId == request.auth.uid
-        && data.businessName is string && data.businessName.size() <= 200
-        && data.keywords is map
-        && data.headlines is list
-        && data.descriptions is list
-        && data.sitelinks is list
-        && data.timestamp is number
-        && (!('tone' in data) || data.tone is string);
-    }
-
     // 1. & 4. Match Blocks
     match /users/{userId} {
-      allow get: if isValidId(userId) && isOwner(userId);
-      allow create: if isValidId(userId) && isOwner(userId) && isValidUser(incoming()) 
-                     && incoming().keys().hasAll(['email', 'isPro', 'generationCount'])
-                     && incoming().keys().size() >= 3;
-      allow update: if isValidId(userId) && isOwner(userId) && isValidUser(incoming()) && (
-        // Identity protection: cannot change email or userId
-        incoming().email == existing().email 
-        && (
-          // Action: Normal update (e.g. generation count)
-          incoming().diff(existing()).affectedKeys().hasOnly(['generationCount', 'updatedAt']) ||
-          // Action: PRO Activation
-          incoming().diff(existing()).affectedKeys().hasOnly(['isPro', 'updatedAt']) ||
-          // Action: Demo Extension
-          incoming().diff(existing()).affectedKeys().hasOnly(['hasUsedDemoCode', 'updatedAt'])
-        )
-      );
+      allow read, write: if isOwner(userId);
     }
 
     match /campaigns/{campaignId} {
-      allow get: if isValidId(campaignId) && isSignedIn() && isOwner(existing().userId);
+      allow read: if isSignedIn() && isOwner(resource.data.userId);
       allow list: if isSignedIn() && resource.data.userId == request.auth.uid;
-      allow create: if isValidId(campaignId) && isSignedIn() && isOwner(incoming().userId) && isValidCampaign(incoming());
-      allow delete: if isValidId(campaignId) && isSignedIn() && isOwner(existing().userId);
+      allow create: if isSignedIn() && isOwner(incoming().userId);
+      allow update, delete: if isSignedIn() && isOwner(existing().userId);
     }
   }
 }
