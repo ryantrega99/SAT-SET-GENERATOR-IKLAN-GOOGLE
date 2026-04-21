@@ -101,11 +101,22 @@ app.post("/api/generate", async (req, res) => {
   const apiKey = userApiKey || process.env.GEMINI_API_KEY;
 
   if (!apiKey) {
-    return res.status(401).json({ error: "Gemini API Key missing. Please set GEMINI_API_KEY in environment variables or provide your own key in settings." });
+    console.error("Gemini API Key missing");
+    return res.status(401).json({ error: "Gemini API Key missing. Please set GEMINI_API_KEY in environment variables." });
   }
 
   try {
-    const genAI = new (GoogleGenAI as any)({ apiKey });
+    console.log("Initializing Gemini AI with model gemini-1.5-flash...");
+    
+    // Attempt multiple initialization patterns for resilience
+    let genAI;
+    try {
+      genAI = new GoogleGenAI(apiKey);
+    } catch (e) {
+      console.log("Standard initialization failed, trying alternate...");
+      genAI = new (GoogleGenAI as any)({ apiKey });
+    }
+
     const model = genAI.getGenerativeModel({ 
       model: "gemini-1.5-flash",
       systemInstruction: "Anda adalah Senior Performance Copywriter Indonesia yang ahli dalam psikologi pembeli. Gaya bahasa Anda santai, persuasif, 'to the point', dan SANGAT MANUSIAWI. Anda benci bahasa formal yang kaku dan klise AI. Anda selalu mematuhi batasan karakter Google Ads (Headline 30, Deskripsi 90).",
@@ -127,10 +138,10 @@ app.post("/api/generate", async (req, res) => {
       INSTRUKSI KHUSUS UNTUK COPYWRITING (SANGAT PENTING):
       - JANGAN gunakan kata: "Solusi", "Terpercaya", "Tingkatkan", "Potensi", "Inovatif", "Modern".
       - GUNAKAN kata-kata yang biasa dipakai manusia saat ngobrol: "Bikin", "Langsung", "Gak pake lama", "Hemat", "Cek sendiri".
-      - HEADLINE: MAKSIMAL 30 KARAKTER. Fokus pada "Pain Point" atau "Instant Benefit". Contoh: "Kopi Enak Gak Harus Mahal" daripada "Nikmati Kopi Berkualitas Tinggi".
-      - DESKRIPSI: MAKSIMAL 90 KARAKTER. Gunakan gaya bahasa bercerita atau testimoni singkat. Contoh: "Udah 500+ orang nyobain dan ketagihan. Cek menunya di sini!"
-      - KEYWORDS: Cari yang "High Intent" (misal: "beli kopi susu jakarta" bukan "apa itu kopi").
-      - SITELINKS: Buat 4 sitelinks yang relevan dengan judul menarik (max 25 char) dan deskripsi (max 35 char).
+      - HEADLINE: MAKSIMAL 30 KARAKTER. Fokus pada "Pain Point" atau "Instant Benefit".
+      - DESKRIPSI: MAKSIMAL 90 KARAKTER. Gunakan gaya bahasa bercerita atau testimoni singkat.
+      - KEYWORDS: Cari yang "High Intent".
+      - SITELINKS: Buat 4 sitelinks yang relevan dengan judul menarik (max 25 char) and deskripsi (max 35 char).
 
       Format output harus JSON sesuai schema.
     `;
@@ -139,42 +150,19 @@ app.post("/api/generate", async (req, res) => {
       contents: [{ role: "user", parts: [{ text: prompt }] }],
       generationConfig: {
         responseMimeType: "application/json",
-        responseSchema: {
-          type: "object" as any,
-          properties: {
-            keywords: {
-              type: "object" as any,
-              properties: {
-                broad: { type: "array" as any, items: { type: "string" as any } },
-                phrase: { type: "array" as any, items: { type: "string" as any } },
-                exact: { type: "array" as any, items: { type: "string" as any } },
-              },
-              required: ["broad", "phrase", "exact"],
-            },
-            headlines: { type: "array" as any, items: { type: "string" as any } },
-            descriptions: { type: "array" as any, items: { type: "string" as any } },
-            sitelinks: {
-              type: "array" as any,
-              items: {
-                type: "object" as any,
-                properties: {
-                  title: { type: "string" as any },
-                  description: { type: "string" as any },
-                },
-                required: ["title", "description"],
-              },
-            },
-          },
-          required: ["keywords", "headlines", "descriptions", "sitelinks"],
-        },
       },
     });
 
-    const response = await result.response;
-    res.json(JSON.parse(response.text()));
+    const responseText = result.response.text();
+    console.log("Gemini response generated successfully");
+    res.json(JSON.parse(responseText));
   } catch (error: any) {
     console.error("Gemini generation error:", error);
-    res.status(500).json({ error: error.message || "Failed to generate campaign" });
+    res.status(500).json({ 
+      error: "Gagal memproses AI.", 
+      message: error.message,
+      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined 
+    });
   }
 });
 
