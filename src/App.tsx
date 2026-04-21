@@ -193,8 +193,13 @@ export default function App() {
     try {
       await signInWithPopup(auth, googleProvider);
       toast.success('Berhasil masuk!');
-    } catch (error) {
-      toast.error('Gagal masuk. Silakan coba lagi.');
+    } catch (error: any) {
+      console.error('Login error:', error);
+      if (error.code === 'auth/unauthorized-domain') {
+        toast.error('Domain tidak diizinkan. Mohon tambahkan domain Anda di Firebase Console.');
+      } else {
+        toast.error(`Gagal masuk: ${error.message || 'Silakan coba lagi.'}`);
+      }
     }
   };
 
@@ -463,7 +468,7 @@ export default function App() {
                 onClick={handleLogin} 
                 className="btn-primary py-2 px-4 sm:py-2.5 sm:px-6 text-xs sm:text-sm"
               >
-                Mulai Sekarang
+                Coba Demo Gratis
               </button>
             </div>
           </div>
@@ -508,7 +513,7 @@ export default function App() {
             >
               <div className="flex flex-col sm:flex-row items-center justify-center gap-4 w-full sm:w-auto px-4 sm:px-0">
                 <button onClick={handleLogin} className="btn-primary w-full sm:w-auto">
-                  Dapatkan Akses • 49k
+                  Coba Demo Gratis
                   <ArrowRight className="w-5 h-5" />
                 </button>
               </div>
@@ -652,7 +657,7 @@ export default function App() {
                   </li>
                 ))}
               </ul>
-              <button onClick={handleLogin} className="btn-secondary w-full">Mulai Gratis</button>
+              <button onClick={handleLogin} className="btn-secondary w-full">Coba Demo Gratis</button>
             </div>
 
             <div className="glass-panel p-8 sm:p-10 rounded-[32px] sm:rounded-[40px] border-blue-600/30 bg-blue-600/5 space-y-8 relative overflow-hidden">
@@ -675,7 +680,7 @@ export default function App() {
                 ))}
               </ul>
               <div className="space-y-4">
-                <button onClick={handleLogin} className="btn-primary w-full shadow-blue-600/40">Ambil Promo Sekarang</button>
+                <button onClick={handleLogin} className="btn-primary w-full shadow-blue-600/40">Coba Demo Gratis</button>
                 <p className="text-[10px] text-center text-zinc-500 font-bold uppercase tracking-widest animate-pulse">
                   ⚠️ Hanya tersisa {slotsLeft} slot untuk harga ini!
                 </p>
