@@ -1,13 +1,16 @@
 import express from "express";
-import { createServer as createViteServer } from "vite";
 import path from "path";
 import { OAuth2Client } from "google-auth-library";
 import cookieParser from "cookie-parser";
 import axios from "axios";
 import dotenv from "dotenv";
 import { GoogleGenAI } from "@google/genai";
+import { fileURLToPath } from "url";
 
 dotenv.config();
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const app = express();
 const PORT = 3000;
@@ -90,16 +93,25 @@ app.get("/api/auth/status", (req, res) => {
 });
 
 app.post("/api/pro/activate", (req, res) => {
-  const { code } = req.body;
-  const proCode = process.env.PRO_ACTIVATION_CODE || "RYANTKAYARAYA1";
-  const demoCode = "DEMOSAJA";
-  
-  if (code === proCode) {
-    res.json({ success: true, type: 'pro', message: "PRO activated successfully" });
-  } else if (code === demoCode) {
-    res.json({ success: true, type: 'demo', message: "Demo extended successfully" });
-  } else {
-    res.status(400).json({ success: false, message: "Kode tidak valid" });
+  try {
+    const { code } = req.body || {};
+    const proCode = process.env.PRO_ACTIVATION_CODE || "RYANTKAYARAYA1";
+    const demoCode = "DEMOSAJA";
+    
+    if (!code) {
+      return res.status(400).json({ success: false, message: "Kode harus diisi" });
+    }
+
+    if (code === proCode) {
+      return res.json({ success: true, type: 'pro', message: "PRO activated successfully" });
+    } else if (code === demoCode) {
+      return res.json({ success: true, type: 'demo', message: "Demo extended successfully" });
+    } else {
+      return res.status(400).json({ success: false, message: "Kode tidak valid" });
+    }
+  } catch (error: any) {
+    console.error("Activation API error:", error);
+    return res.status(500).json({ success: false, message: "Internal server error" });
   }
 });
 
@@ -163,22 +175,22 @@ app.post("/api/google-ads/publish", async (req, res) => {
 // Vite middleware setup
 async function startServer() {
   if (process.env.NODE_ENV !== "production") {
+    const { createServer: createViteServer } = await import("vite");
     const vite = await createViteServer({
       server: { middlewareMode: true },
       appType: "spa",
     });
     app.use(vite.middlewares);
+    
+    app.listen(PORT, "0.0.0.0", () => {
+      console.log(`Server running on http://localhost:${PORT}`);
+    });
   } else {
+    // In Vercel, static files are handled by vercel.json rewrites
+    // but we can still provide a fallback for other environments
     const distPath = path.join(process.cwd(), "dist");
     app.use(express.static(distPath));
-    app.get("*", (req, res) => {
-      res.sendFile(path.join(distPath, "index.html"));
-    });
   }
-
-  app.listen(PORT, "0.0.0.0", () => {
-    console.log(`Server running on http://localhost:${PORT}`);
-  });
 }
 
 if (process.env.NODE_ENV !== "production") {
