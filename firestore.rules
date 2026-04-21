@@ -18,7 +18,8 @@ service cloud.firestore {
       return data.email is string && data.email.size() > 3 && data.email.size() < 256
         && data.isPro is bool
         && data.generationCount is number
-        && data.generationCount >= 0;
+        && data.generationCount >= 0
+        && (!('hasUsedDemoCode' in data) || data.hasUsedDemoCode is bool);
     }
 
     function isValidCampaign(data) {
@@ -45,7 +46,9 @@ service cloud.firestore {
           // Action: Normal update (e.g. generation count)
           incoming().diff(existing()).affectedKeys().hasOnly(['generationCount', 'updatedAt']) ||
           // Action: PRO Activation
-          incoming().diff(existing()).affectedKeys().hasOnly(['isPro', 'updatedAt'])
+          incoming().diff(existing()).affectedKeys().hasOnly(['isPro', 'updatedAt']) ||
+          // Action: Demo Extension
+          incoming().diff(existing()).affectedKeys().hasOnly(['hasUsedDemoCode', 'updatedAt'])
         )
       );
     }

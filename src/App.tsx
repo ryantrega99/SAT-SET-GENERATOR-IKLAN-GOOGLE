@@ -163,6 +163,7 @@ export default function App() {
             const initialData = {
               email: currentUser.email || '',
               isPro: false,
+              hasUsedDemoCode: false,
               generationCount: 0,
               createdAt: new Date().toISOString()
             };
