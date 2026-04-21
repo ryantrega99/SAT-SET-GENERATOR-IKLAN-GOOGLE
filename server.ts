@@ -91,7 +91,7 @@ app.get("/api/auth/status", (req, res) => {
 
 app.post("/api/pro/activate", (req, res) => {
   const { code } = req.body;
-  const secretCode = process.env.PRO_ACTIVATION_CODE || "RYANTKAYARAYA";
+  const secretCode = process.env.PRO_ACTIVATION_CODE || "RYANTKAYARAYA1";
   
   if (code === secretCode) {
     res.json({ success: true, message: "PRO activated successfully" });
