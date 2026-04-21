@@ -22,6 +22,10 @@ const oauth2Client = new OAuth2Client(
 );
 
 // API Routes
+app.get("/api/ping", (req, res) => {
+  res.json({ pong: true, env: process.env.NODE_ENV });
+});
+
 app.get("/api/auth/google/url", (req, res) => {
   const clientId = process.env.GOOGLE_CLIENT_ID;
   const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
@@ -101,22 +105,15 @@ app.post("/api/generate", async (req, res) => {
   const apiKey = userApiKey || process.env.GEMINI_API_KEY;
 
   if (!apiKey) {
-    console.error("Gemini API Key missing");
+    console.error("Gemini API Key missing in environment and request");
     return res.status(401).json({ error: "Gemini API Key missing. Please set GEMINI_API_KEY in environment variables." });
   }
 
-  try {
-    console.log("Initializing Gemini AI with model gemini-1.5-flash...");
-    
-    // Attempt multiple initialization patterns for resilience
-    let genAI;
-    try {
-      genAI = new GoogleGenAI(apiKey);
-    } catch (e) {
-      console.log("Standard initialization failed, trying alternate...");
-      genAI = new (GoogleGenAI as any)({ apiKey });
-    }
+  console.log("Gemini API Key presence confirmed");
 
+  try {
+    console.log("Initializing Gemini AI...");
+    const genAI = new GoogleGenAI(apiKey) as any;
     const model = genAI.getGenerativeModel({ 
       model: "gemini-1.5-flash",
       systemInstruction: "Anda adalah Senior Performance Copywriter Indonesia yang ahli dalam psikologi pembeli. Gaya bahasa Anda santai, persuasif, 'to the point', dan SANGAT MANUSIAWI. Anda benci bahasa formal yang kaku dan klise AI. Anda selalu mematuhi batasan karakter Google Ads (Headline 30, Deskripsi 90).",
@@ -135,26 +132,53 @@ app.post("/api/generate", async (req, res) => {
       ${businessInfo.url ? `URL: ${businessInfo.url}` : ""}
       ${toneInstruction}
 
-      INSTRUKSI KHUSUS UNTUK COPYWRITING (SANGAT PENTING):
+      INSTRUKSI KHUSUS:
       - JANGAN gunakan kata: "Solusi", "Terpercaya", "Tingkatkan", "Potensi", "Inovatif", "Modern".
-      - GUNAKAN kata-kata yang biasa dipakai manusia saat ngobrol: "Bikin", "Langsung", "Gak pake lama", "Hemat", "Cek sendiri".
-      - HEADLINE: MAKSIMAL 30 KARAKTER. Fokus pada "Pain Point" atau "Instant Benefit".
-      - DESKRIPSI: MAKSIMAL 90 KARAKTER. Gunakan gaya bahasa bercerita atau testimoni singkat.
-      - KEYWORDS: Cari yang "High Intent".
-      - SITELINKS: Buat 4 sitelinks yang relevan dengan judul menarik (max 25 char) and deskripsi (max 35 char).
+      - GUNAKAN kata-kata santai.
+      - HEADLINE: MAX 30 CHAR.
+      - DESKRIPSI: MAX 90 CHAR.
+      - SITELINKS: Buat 4.
 
-      Format output harus JSON sesuai schema.
+      Format output harus JSON.
     `;
 
     const result = await model.generateContent({
       contents: [{ role: "user", parts: [{ text: prompt }] }],
       generationConfig: {
         responseMimeType: "application/json",
+        responseSchema: {
+          type: "object" as any,
+          properties: {
+            keywords: {
+              type: "object" as any,
+              properties: {
+                broad: { type: "array" as any, items: { type: "string" as any } },
+                phrase: { type: "array" as any, items: { type: "string" as any } },
+                exact: { type: "array" as any, items: { type: "string" as any } },
+              },
+              required: ["broad", "phrase", "exact"],
+            },
+            headlines: { type: "array" as any, items: { type: "string" as any } },
+            descriptions: { type: "array" as any, items: { type: "string" as any } },
+            sitelinks: {
+              type: "array" as any,
+              items: {
+                type: "object" as any,
+                properties: {
+                  title: { type: "string" as any },
+                  description: { type: "string" as any },
+                },
+                required: ["title", "description"],
+              },
+            },
+          },
+          required: ["keywords", "headlines", "descriptions", "sitelinks"],
+        },
       },
     });
 
     const responseText = result.response.text();
-    console.log("Gemini response generated successfully");
+    console.log("Gemini response generated");
     res.json(JSON.parse(responseText));
   } catch (error: any) {
     console.error("Gemini generation error:", error);

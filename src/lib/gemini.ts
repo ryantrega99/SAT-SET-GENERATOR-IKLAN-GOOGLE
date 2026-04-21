@@ -40,7 +40,7 @@ export async function generateAdCampaign(
       console.error('Non-JSON error response:', text);
       if (text.includes('504')) errorMsg = 'Server timeout (Vercel). Silakan coba lagi.';
       else if (text.includes('500')) errorMsg = 'Internal Server Error. Silakan cek logs.';
-      else errorMsg = 'Terjadi kesalahan sistem. Silakan coba lagi.';
+      else errorMsg = `Error ${response.status}: ${text.slice(0, 50)}...`;
     }
     throw new Error(errorMsg);
   }
