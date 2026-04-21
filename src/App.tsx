@@ -356,7 +356,7 @@ export default function App() {
       return;
     }
 
-    if (!userData.isPro && userData.generationCount >= 1 && !userSettings.geminiKey) {
+    if (!userData.isPro && userData.generationCount >= 1) {
       setShowUpgradeModal(true);
       return;
     }
@@ -909,7 +909,7 @@ export default function App() {
 
         <div className="p-6 border-t border-zinc-200 dark:border-zinc-800/50 space-y-6">
             <div className="bg-zinc-100 dark:bg-zinc-800/50 rounded-2xl p-4 border border-zinc-200 dark:border-zinc-700/50">
-            {userData?.isPro || userSettings.geminiKey ? (
+            {userData?.isPro ? (
               <div className="space-y-2">
                 <div className="flex items-center gap-2 text-blue-500">
                   <Zap className="w-4 h-4 fill-current" />
@@ -1432,31 +1432,51 @@ export default function App() {
                 </div>
 
                 <div className="space-y-8">
-                    <div className="space-y-3">
-                      <div className="flex items-center justify-between px-1">
-                        <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">
-                          Gemini API Key
-                        </label>
-                        <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noreferrer" className="text-[10px] font-bold text-blue-500 hover:underline">Dapatkan Key Gratis</a>
+                    {userData?.isPro ? (
+                      <div className="space-y-3">
+                        <div className="flex items-center justify-between px-1">
+                          <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">
+                            Gemini API Key
+                          </label>
+                          <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noreferrer" className="text-[10px] font-bold text-blue-500 hover:underline">Dapatkan Key Gratis</a>
+                        </div>
+                        <div className="flex items-center gap-3 w-full bg-white dark:bg-zinc-950/50 border border-zinc-200 dark:border-zinc-800 rounded-xl px-4 transition-all focus-within:ring-4 focus-within:ring-blue-500/10 focus-within:border-primary group/input">
+                          <Zap className="w-4 h-4 text-zinc-400 group-focus-within/input:text-blue-500 transition-colors shrink-0" />
+                          <input
+                            type="password"
+                            className="w-full bg-transparent py-3 outline-none text-zinc-900 dark:text-white placeholder:text-zinc-400 dark:placeholder:text-zinc-600 text-sm sm:text-base"
+                            placeholder="Masukkan API Key Anda..."
+                            value={userSettings.geminiKey}
+                            onChange={(e) => {
+                              const newSettings = { ...userSettings, geminiKey: e.target.value };
+                              setUserSettings(newSettings);
+                              localStorage.setItem('ad_gen_settings', JSON.stringify(newSettings));
+                            }}
+                          />
+                        </div>
+                        <p className="text-[10px] text-zinc-500 leading-relaxed italic px-1">
+                          *Anda dapat menggunakan API Key sendiri untuk performa aplikasi yang lebih maksimal.
+                        </p>
                       </div>
-                      <div className="flex items-center gap-3 w-full bg-white dark:bg-zinc-950/50 border border-zinc-200 dark:border-zinc-800 rounded-xl px-4 transition-all focus-within:ring-4 focus-within:ring-blue-500/10 focus-within:border-primary group/input">
-                        <Zap className="w-4 h-4 text-zinc-400 group-focus-within/input:text-blue-500 transition-colors shrink-0" />
-                        <input
-                          type="password"
-                          className="w-full bg-transparent py-3 outline-none text-zinc-900 dark:text-white placeholder:text-zinc-400 dark:placeholder:text-zinc-600 text-sm sm:text-base"
-                          placeholder="Masukkan API Key Anda..."
-                          value={userSettings.geminiKey}
-                          onChange={(e) => {
-                            const newSettings = { ...userSettings, geminiKey: e.target.value };
-                            setUserSettings(newSettings);
-                            localStorage.setItem('ad_gen_settings', JSON.stringify(newSettings));
-                          }}
-                        />
+                    ) : (
+                      <div className="glass-panel p-6 rounded-3xl border border-blue-600/20 bg-blue-600/5">
+                        <div className="flex gap-4">
+                          <div className="w-10 h-10 bg-blue-600/20 rounded-xl flex items-center justify-center shrink-0">
+                            <Zap className="w-5 h-5 text-blue-500" />
+                          </div>
+                          <div className="space-y-1">
+                            <h4 className="text-sm font-bold">Custom API Key (Hanya Member PRO)</h4>
+                            <p className="text-xs text-zinc-500">Upgrade ke PRO untuk menggunakan API Key pribadi dan fitur eksklusif lainnya.</p>
+                            <button 
+                              onClick={() => setShowUpgradeModal(true)}
+                              className="mt-3 text-[10px] font-black text-blue-500 uppercase tracking-widest hover:underline"
+                            >
+                              Upgrade Sekarang
+                            </button>
+                          </div>
+                        </div>
                       </div>
-                      <p className="text-[10px] text-zinc-500 leading-relaxed italic px-1">
-                        *Gunakan API Key sendiri untuk mendapatkan akses <b>Unlimited</b> (tanpa batas) secara gratis. 
-                      </p>
-                    </div>
+                    )}
 
                   <div className="space-y-6 pt-6 border-t border-zinc-800/50">
                     <div className="flex items-center gap-2 text-zinc-400">
@@ -1770,20 +1790,6 @@ export default function App() {
                     <MessageSquare className="w-6 h-6" />
                     Beli Kode via WA • 49k
                   </a>
-
-                  <div className="pt-4 border-t border-zinc-100 dark:border-zinc-800">
-                    <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-4">Punya Gemini API Key?</p>
-                    <button 
-                      onClick={() => {
-                        setShowUpgradeModal(false);
-                        setActiveTab('settings');
-                      }}
-                      className="w-full py-3 border border-zinc-200 dark:border-zinc-800 rounded-xl text-xs font-bold text-zinc-600 dark:text-zinc-400 hover:bg-zinc-50 dark:hover:bg-zinc-900 transition-all flex items-center justify-center gap-2"
-                    >
-                      <Zap className="w-4 h-4 text-yellow-500" />
-                      Gunakan API Key Sendiri (Unlimit)
-                    </button>
-                  </div>
 
                   <button onClick={() => setShowUpgradeModal(false)} className="w-full py-2 text-zinc-500 font-bold hover:text-zinc-900 dark:hover:text-white transition-colors text-xs uppercase tracking-widest">Mungkin Nanti</button>
                 </div>
