@@ -54,6 +54,11 @@ import {
   updateDoc, 
   increment,
   onSnapshot,
+  collection,
+  query,
+  where,
+  orderBy,
+  limit,
   User
 } from './lib/firebase';
 import { clsx, type ClassValue } from 'clsx';
@@ -123,15 +128,8 @@ export default function App() {
   });
   const [loading, setLoading] = useState(false);
   const [campaign, setCampaign] = useState<AdCampaign | null>(null);
-  const [history, setHistory] = useState<SavedCampaign[]>(() => {
-    const saved = localStorage.getItem('ad_gen_history');
-    return saved ? JSON.parse(saved) : [];
-  });
+  const [history, setHistory] = useState<SavedCampaign[]>([]);
   const [loadingStep, setLoadingStep] = useState<string>('');
-  const [generationCount, setGenerationCount] = useState<number>(() => {
-    const saved = localStorage.getItem('ad_gen_count');
-    return saved ? parseInt(saved, 10) : 0;
-  });
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   const [activeTab, setActiveTab] = useState<'dashboard' | 'settings' | 'history' | 'analytics'>('dashboard');
   const [userSettings, setUserSettings] = useState(() => {
@@ -175,14 +173,30 @@ export default function App() {
           }
         });
 
-        // Sync History (Optional: could use a limit)
-        // For simplicity, we can load history here or on demand
-        
-        return () => unsubscribeUser();
+        // Sync History from Firestore
+        const historyQuery = query(
+          collection(db, 'campaigns'),
+          where('userId', '==', currentUser.uid),
+          orderBy('timestamp', 'desc'),
+          limit(20)
+        );
+        const unsubscribeHistory = onSnapshot(historyQuery, (snapshot) => {
+          const fetchedHistory = snapshot.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data()
+          })) as SavedCampaign[];
+          setHistory(fetchedHistory);
+        });
+
+        return () => {
+          unsubscribeUser();
+          unsubscribeHistory();
+        };
       } else {
         setIsLoggedIn(false);
         setUser(null);
         setUserData(null);
+        setHistory([]);
       }
     });
 
@@ -352,7 +366,13 @@ export default function App() {
     try {
       setTimeout(() => setLoadingStep('Mencari kata kunci berkinerja tinggi...'), 1500);
       setTimeout(() => setLoadingStep('Menyusun copy iklan persuasif...'), 3000);
-      const result = await generateAdCampaign(formData, userSettings.geminiKey);
+      
+      const normalizedFormData = {
+        ...formData,
+        url: formData.url ? (formData.url.startsWith('http') ? formData.url : `https://${formData.url}`) : ''
+      };
+
+      const result = await generateAdCampaign(normalizedFormData, userSettings.geminiKey);
       setCampaign(result);
       
       const campaignId = Math.random().toString(36).substr(2, 9);
@@ -377,10 +397,6 @@ export default function App() {
           updatedAt: new Date().toISOString()
         });
       }
-
-      const newHistory = [newCampaign, ...history].slice(0, 10);
-      setHistory(newHistory);
-      localStorage.setItem('ad_gen_history', JSON.stringify(newHistory));
       
       // Auto scroll to results
       setTimeout(() => {
@@ -404,7 +420,12 @@ export default function App() {
   const getUrlParts = (urlStr: string) => {
     try {
       if (!urlStr) return { hostname: 'www.bisnisanda.com', pathname: '' };
-      const url = new URL(urlStr.startsWith('http') ? urlStr : `https://${urlStr}`);
+      // Pre-process to ensure we handle things like "google.com" correctly
+      let normalizedUrl = urlStr.trim().toLowerCase();
+      if (!normalizedUrl.startsWith('http://') && !normalizedUrl.startsWith('https://')) {
+        normalizedUrl = 'https://' + normalizedUrl;
+      }
+      const url = new URL(normalizedUrl);
       return {
         hostname: url.hostname,
         pathname: url.pathname === '/' ? '' : url.pathname.split('/').filter(Boolean).join(' › ')

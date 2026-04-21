@@ -31,15 +31,15 @@ export async function generateAdCampaign(
 
   if (!response.ok) {
     let errorMsg = 'Failed to generate campaign';
+    const responseClone = response.clone();
     try {
       const error = await response.json();
       errorMsg = error.error || errorMsg;
     } catch (e) {
-      // If response is not JSON, we might get the raw text (like Vercel error pages)
-      const text = await response.text();
+      const text = await responseClone.text();
       console.error('Non-JSON error response:', text);
-      if (text.includes('504')) errorMsg = 'Server timeout (Vercel Limit). Silakan coba lagi.';
-      else if (text.includes('500')) errorMsg = 'Internal Server Error. Silakan cek logs Vercel.';
+      if (text.includes('504')) errorMsg = 'Server timeout (Vercel). Silakan coba lagi.';
+      else if (text.includes('500')) errorMsg = 'Internal Server Error. Silakan cek logs.';
       else errorMsg = 'Terjadi kesalahan sistem. Silakan coba lagi.';
     }
     throw new Error(errorMsg);
