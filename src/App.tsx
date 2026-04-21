@@ -356,7 +356,8 @@ export default function App() {
       return;
     }
 
-    if (!userData.isPro && userData.generationCount >= 1) {
+    const limit = userData.hasUsedDemoCode ? 2 : 1;
+    if (!userData.isPro && userData.generationCount >= limit) {
       setShowUpgradeModal(true);
       return;
     }
@@ -909,7 +910,7 @@ export default function App() {
 
         <div className="p-6 border-t border-zinc-200 dark:border-zinc-800/50 space-y-6">
             <div className="bg-zinc-100 dark:bg-zinc-800/50 rounded-2xl p-4 border border-zinc-200 dark:border-zinc-700/50">
-            {userData?.isPro ? (
+            {userData?.isPro || userSettings.geminiKey ? (
               <div className="space-y-2">
                 <div className="flex items-center gap-2 text-blue-500">
                   <Zap className="w-4 h-4 fill-current" />
@@ -922,11 +923,11 @@ export default function App() {
             ) : (
               <>
                 <div className="flex items-center justify-between mb-3">
-                  <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Free Plan</span>
-                  <span className="text-[10px] font-bold text-blue-500 uppercase tracking-widest">{Math.max(0, 1 - (userData?.generationCount || 0))} Sisa</span>
+                  <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">{userData?.hasUsedDemoCode ? 'Extended Demo' : 'Free Plan'}</span>
+                  <span className="text-[10px] font-bold text-blue-500 uppercase tracking-widest">{Math.max(0, (userData?.hasUsedDemoCode ? 2 : 1) - (userData?.generationCount || 0))} Sisa</span>
                 </div>
                 <div className="h-1.5 w-full bg-zinc-200 dark:bg-zinc-900 rounded-full overflow-hidden">
-                  <div className="h-full bg-blue-600 rounded-full" style={{ width: `${(Math.max(0, 1 - (userData?.generationCount || 0)) / 1) * 100}%` }} />
+                  <div className="h-full bg-blue-600 rounded-full" style={{ width: `${(Math.max(0, (userData?.hasUsedDemoCode ? 2 : 1) - (userData?.generationCount || 0)) / (userData?.hasUsedDemoCode ? 2 : 1)) * 100}%` }} />
                 </div>
                 <button onClick={() => setShowUpgradeModal(true)} className="w-full mt-4 py-2 bg-blue-600 text-white text-[10px] font-black uppercase tracking-widest rounded-lg hover:bg-blue-500 transition-colors">
                   Upgrade Pro
@@ -1668,7 +1669,7 @@ export default function App() {
                 {[
                       {label: 'Total Generasi', value: userData?.generationCount || 0, icon: Sparkles, color: 'text-blue-500'},
                       {label: 'Kampanye Aktif', value: history.length, icon: Rocket, color: 'text-green-500'},
-                      {label: 'Sisa Kuota', value: (userData?.isPro || userSettings.geminiKey) ? '∞' : Math.max(0, 1 - (userData?.generationCount || 0)), icon: Zap, color: 'text-yellow-500'}
+                      {label: 'Sisa Kuota', value: (userData?.isPro || userSettings.geminiKey) ? '∞' : Math.max(0, (userData?.hasUsedDemoCode ? 2 : 1) - (userData?.generationCount || 0)), icon: Zap, color: 'text-yellow-500'}
                 ].map((stat, i) => (
                   <div key={i} className="glass-panel p-8 rounded-[32px] space-y-4">
                     <div className="flex items-center justify-between">
@@ -1761,12 +1762,20 @@ export default function App() {
                             const data = await res.json();
                             if (data.success) {
                               const userRef = doc(db, 'users', user.uid);
-                              await updateDoc(userRef, {
-                                isPro: true,
-                                updatedAt: new Date().toISOString()
-                              });
+                              if (data.type === 'pro') {
+                                await updateDoc(userRef, {
+                                  isPro: true,
+                                  updatedAt: new Date().toISOString()
+                                });
+                                toast.success('Selamat! Akun PRO Berhasil Diaktifkan');
+                              } else {
+                                await updateDoc(userRef, {
+                                  hasUsedDemoCode: true,
+                                  updatedAt: new Date().toISOString()
+                                });
+                                toast.success('Berhasil! Jatah Demo Bertambah 1');
+                              }
                               setShowUpgradeModal(false);
-                              toast.success('Selamat! Akun PRO Berhasil Diaktifkan');
                             } else {
                               toast.error('Kode tidak valid');
                             }

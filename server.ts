@@ -91,12 +91,15 @@ app.get("/api/auth/status", (req, res) => {
 
 app.post("/api/pro/activate", (req, res) => {
   const { code } = req.body;
-  const secretCode = process.env.PRO_ACTIVATION_CODE || "RYANTKAYARAYA1";
+  const proCode = process.env.PRO_ACTIVATION_CODE || "RYANTKAYARAYA1";
+  const demoCode = "DEMOSAJA";
   
-  if (code === secretCode) {
-    res.json({ success: true, message: "PRO activated successfully" });
+  if (code === proCode) {
+    res.json({ success: true, type: 'pro', message: "PRO activated successfully" });
+  } else if (code === demoCode) {
+    res.json({ success: true, type: 'demo', message: "Demo extended successfully" });
   } else {
-    res.status(400).json({ success: false, message: "Invalid activation code" });
+    res.status(400).json({ success: false, message: "Kode tidak valid" });
   }
 });
 
