@@ -41,6 +41,21 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { generateAdCampaign, AdCampaign } from './lib/gemini';
+import { 
+  auth, 
+  db, 
+  googleProvider, 
+  signInWithPopup, 
+  signOut, 
+  onAuthStateChanged, 
+  doc, 
+  getDoc, 
+  setDoc, 
+  updateDoc, 
+  increment,
+  onSnapshot,
+  User
+} from './lib/firebase';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import { Toaster, toast } from 'sonner';
@@ -99,6 +114,8 @@ const HeadlineItem: React.FC<HeadlineItemProps> = ({ text, id, onCopy, copiedId 
 };
 
 export default function App() {
+  const [user, setUser] = useState<User | null>(null);
+  const [userData, setUserData] = useState<{ isPro: boolean; generationCount: number; email: string } | null>(null);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [darkMode, setDarkMode] = useState(() => {
     const saved = localStorage.getItem('ad_gen_dark_mode');
@@ -134,7 +151,61 @@ export default function App() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [previewMode, setPreviewMode] = useState<'desktop' | 'mobile'>('desktop');
   const [promoCode, setPromoCode] = useState('');
-  const [isPro, setIsPro] = useState(false);
+  
+  React.useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
+      if (currentUser) {
+        setIsLoggedIn(true);
+        setUser(currentUser);
+        
+        // Sync User Data
+        const userRef = doc(db, 'users', currentUser.uid);
+        const unsubscribeUser = onSnapshot(userRef, async (docSnap) => {
+          if (!docSnap.exists()) {
+            const initialData = {
+              email: currentUser.email || '',
+              isPro: false,
+              generationCount: 0,
+              createdAt: new Date().toISOString()
+            };
+            await setDoc(userRef, initialData);
+            setUserData(initialData as any);
+          } else {
+            setUserData(docSnap.data() as any);
+          }
+        });
+
+        // Sync History (Optional: could use a limit)
+        // For simplicity, we can load history here or on demand
+        
+        return () => unsubscribeUser();
+      } else {
+        setIsLoggedIn(false);
+        setUser(null);
+        setUserData(null);
+      }
+    });
+
+    return () => unsubscribe();
+  }, []);
+
+  const handleLogin = async () => {
+    try {
+      await signInWithPopup(auth, googleProvider);
+      toast.success('Berhasil masuk!');
+    } catch (error) {
+      toast.error('Gagal masuk. Silakan coba lagi.');
+    }
+  };
+
+  const handleLogout = async () => {
+    try {
+      await signOut(auth);
+      toast.success('Berhasil keluar');
+    } catch (error) {
+      toast.error('Gagal keluar');
+    }
+  };
 
   React.useEffect(() => {
     if (darkMode) {
@@ -260,10 +331,17 @@ export default function App() {
 
   const handleGenerate = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!isPro && generationCount >= 1) {
+    
+    if (!userData) {
+      toast.error('Mohon tunggu sebentar...');
+      return;
+    }
+
+    if (!userData.isPro && userData.generationCount >= 1) {
       setShowUpgradeModal(true);
       return;
     }
+
     setLoading(true);
     setLoadingStep('Menganalisis bisnis Anda...');
     try {
@@ -271,25 +349,40 @@ export default function App() {
       setTimeout(() => setLoadingStep('Menyusun copy iklan persuasif...'), 3000);
       const result = await generateAdCampaign(formData, userSettings.geminiKey);
       setCampaign(result);
+      
+      const campaignId = Math.random().toString(36).substr(2, 9);
       const newCampaign: SavedCampaign = {
         ...result,
-        id: Math.random().toString(36).substr(2, 9),
+        id: campaignId,
         timestamp: Date.now(),
         businessName: formData.name,
         tone: formData.tone
       };
+
+      // Save to Firebase
+      if (user) {
+        await setDoc(doc(db, 'campaigns', campaignId), {
+          ...newCampaign,
+          userId: user.uid
+        });
+        
+        // Increment generation count
+        await updateDoc(doc(db, 'users', user.uid), {
+          generationCount: increment(1),
+          updatedAt: new Date().toISOString()
+        });
+      }
+
       const newHistory = [newCampaign, ...history].slice(0, 10);
       setHistory(newHistory);
       localStorage.setItem('ad_gen_history', JSON.stringify(newHistory));
-      setGenerationCount(prev => prev + 1);
-      localStorage.setItem('ad_gen_count', (generationCount + 1).toString());
       
       // Auto scroll to results
       setTimeout(() => {
         window.scrollTo({ top: 0, behavior: 'smooth' });
       }, 100);
-    } catch (error) {
-      toast.error('Gagal membuat kampanye. Silakan coba lagi.');
+    } catch (error: any) {
+      toast.error(error.message || 'Gagal membuat kampanye. Silakan coba lagi.');
     } finally {
       setLoading(false);
       setLoadingStep('');
@@ -366,7 +459,12 @@ export default function App() {
               >
                 {darkMode ? <Sun className="w-4 h-4 sm:w-5 sm:h-5" /> : <Moon className="w-4 h-4 sm:w-5 sm:h-5" />}
               </button>
-              <button onClick={() => setIsLoggedIn(true)} className="btn-primary py-2 px-4 sm:py-2.5 sm:px-6 text-xs sm:text-sm">Mulai Sekarang</button>
+              <button 
+                onClick={handleLogin} 
+                className="btn-primary py-2 px-4 sm:py-2.5 sm:px-6 text-xs sm:text-sm"
+              >
+                Mulai Sekarang
+              </button>
             </div>
           </div>
         </nav>
@@ -409,7 +507,7 @@ export default function App() {
               className="flex flex-col items-center gap-6"
             >
               <div className="flex flex-col sm:flex-row items-center justify-center gap-4 w-full sm:w-auto px-4 sm:px-0">
-                <button onClick={() => setIsLoggedIn(true)} className="btn-primary w-full sm:w-auto">
+                <button onClick={handleLogin} className="btn-primary w-full sm:w-auto">
                   Dapatkan Akses • 49k
                   <ArrowRight className="w-5 h-5" />
                 </button>
@@ -554,7 +652,7 @@ export default function App() {
                   </li>
                 ))}
               </ul>
-              <button onClick={() => setIsLoggedIn(true)} className="btn-secondary w-full">Mulai Gratis</button>
+              <button onClick={handleLogin} className="btn-secondary w-full">Mulai Gratis</button>
             </div>
 
             <div className="glass-panel p-8 sm:p-10 rounded-[32px] sm:rounded-[40px] border-blue-600/30 bg-blue-600/5 space-y-8 relative overflow-hidden">
@@ -577,7 +675,7 @@ export default function App() {
                 ))}
               </ul>
               <div className="space-y-4">
-                <button onClick={() => setIsLoggedIn(true)} className="btn-primary w-full shadow-blue-600/40">Ambil Promo Sekarang</button>
+                <button onClick={handleLogin} className="btn-primary w-full shadow-blue-600/40">Ambil Promo Sekarang</button>
                 <p className="text-[10px] text-center text-zinc-500 font-bold uppercase tracking-widest animate-pulse">
                   ⚠️ Hanya tersisa {slotsLeft} slot untuk harga ini!
                 </p>
@@ -785,7 +883,7 @@ export default function App() {
 
         <div className="p-6 border-t border-zinc-200 dark:border-zinc-800/50 space-y-6">
             <div className="bg-zinc-100 dark:bg-zinc-800/50 rounded-2xl p-4 border border-zinc-200 dark:border-zinc-700/50">
-            {isPro ? (
+            {userData?.isPro ? (
               <div className="space-y-2">
                 <div className="flex items-center gap-2 text-blue-500">
                   <Zap className="w-4 h-4 fill-current" />
@@ -797,10 +895,10 @@ export default function App() {
               <>
                 <div className="flex items-center justify-between mb-3">
                   <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Free Plan</span>
-                  <span className="text-[10px] font-bold text-blue-500 uppercase tracking-widest">{Math.max(0, 1 - generationCount)} Sisa</span>
+                  <span className="text-[10px] font-bold text-blue-500 uppercase tracking-widest">{Math.max(0, 1 - (userData?.generationCount || 0))} Sisa</span>
                 </div>
                 <div className="h-1.5 w-full bg-zinc-200 dark:bg-zinc-900 rounded-full overflow-hidden">
-                  <div className="h-full bg-blue-600 rounded-full" style={{ width: `${(Math.max(0, 1 - generationCount) / 1) * 100}%` }} />
+                  <div className="h-full bg-blue-600 rounded-full" style={{ width: `${(Math.max(0, 1 - (userData?.generationCount || 0)) / 1) * 100}%` }} />
                 </div>
                 <button onClick={() => setShowUpgradeModal(true)} className="w-full mt-4 py-2 bg-blue-600 text-white text-[10px] font-black uppercase tracking-widest rounded-lg hover:bg-blue-500 transition-colors">
                   Upgrade Pro
@@ -809,9 +907,9 @@ export default function App() {
             )}
           </div>
           
-          <button onClick={() => setIsLoggedIn(false)} className="w-full flex items-center gap-3 px-4 py-2 text-zinc-500 hover:text-red-500 transition-colors font-bold text-sm">
+          <button onClick={handleLogout} className="w-full flex items-center gap-3 px-4 py-2 text-zinc-500 hover:text-red-500 transition-colors font-bold text-sm">
             <LogOut className="w-5 h-5" />
-            Keluar
+            Keluar Akun
           </button>
         </div>
       </aside>
@@ -839,11 +937,11 @@ export default function App() {
             </button>
             <div className="flex items-center gap-2 sm:gap-3 pl-4 sm:pl-6 border-l border-zinc-200 dark:border-zinc-800/50">
               <div className="text-right hidden sm:block">
-                <div className="text-sm font-bold text-zinc-900 dark:text-white">Laris Digi</div>
-                <div className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest">Free Account</div>
+                <div className="text-sm font-bold text-zinc-900 dark:text-white truncate max-w-[100px]">{user?.displayName || 'User'}</div>
+                <div className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest">{userData?.isPro ? 'PRO Account' : 'Free Account'}</div>
               </div>
-              <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 flex items-center justify-center font-bold text-zinc-500 dark:text-zinc-400 text-xs sm:text-sm">
-                LD
+              <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 flex items-center justify-center font-bold text-zinc-500 dark:text-zinc-400 text-xs sm:text-sm overflow-hidden">
+                {user?.photoURL ? <img src={user.photoURL} alt="User" referrerPolicy="no-referrer" /> : (user?.email?.[0].toUpperCase() || 'U')}
               </div>
             </div>
           </div>
@@ -1520,9 +1618,9 @@ export default function App() {
               <h3 className="text-3xl font-display font-bold">Analytics</h3>
               <div className="grid sm:grid-cols-3 gap-6">
                 {[
-                  { label: 'Total Generasi', value: generationCount, icon: Sparkles, color: 'text-blue-500' },
-                  { label: 'Kampanye Aktif', value: history.length, icon: Rocket, color: 'text-green-500' },
-                  { label: 'Sisa Kuota', value: Math.max(0, 1 - generationCount), icon: Zap, color: 'text-yellow-500' }
+                      {label: 'Total Generasi', value: userData?.generationCount || 0, icon: Sparkles, color: 'text-blue-500'},
+                      {label: 'Kampanye Aktif', value: history.length, icon: Rocket, color: 'text-green-500'},
+                      {label: 'Sisa Kuota', value: userData?.isPro ? '∞' : Math.max(0, 1 - (userData?.generationCount || 0)), icon: Zap, color: 'text-yellow-500'}
                 ].map((stat, i) => (
                   <div key={i} className="glass-panel p-8 rounded-[32px] space-y-4">
                     <div className="flex items-center justify-between">
@@ -1605,6 +1703,7 @@ export default function App() {
                       />
                       <button 
                         onClick={async () => {
+                          if (!user) return;
                           try {
                             const res = await fetch('/api/pro/activate', {
                               method: 'POST',
@@ -1613,7 +1712,11 @@ export default function App() {
                             });
                             const data = await res.json();
                             if (data.success) {
-                              setIsPro(true);
+                              const userRef = doc(db, 'users', user.uid);
+                              await updateDoc(userRef, {
+                                isPro: true,
+                                updatedAt: new Date().toISOString()
+                              });
                               setShowUpgradeModal(false);
                               toast.success('Selamat! Akun PRO Berhasil Diaktifkan');
                             } else {

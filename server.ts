@@ -5,6 +5,7 @@ import { OAuth2Client } from "google-auth-library";
 import cookieParser from "cookie-parser";
 import axios from "axios";
 import dotenv from "dotenv";
+import { GoogleGenAI } from "@google/genai";
 
 dotenv.config();
 
@@ -92,6 +93,88 @@ app.post("/api/pro/activate", (req, res) => {
     res.json({ success: true, message: "PRO activated successfully" });
   } else {
     res.status(400).json({ success: false, message: "Invalid activation code" });
+  }
+});
+
+app.post("/api/generate", async (req, res) => {
+  const { businessInfo, userApiKey } = req.body;
+  const apiKey = userApiKey || process.env.GEMINI_API_KEY;
+
+  if (!apiKey) {
+    return res.status(401).json({ error: "Gemini API Key missing. Please set GEMINI_API_KEY in environment variables or provide your own key in settings." });
+  }
+
+  try {
+    const genAI = new (GoogleGenAI as any)(apiKey);
+    const model = genAI.getGenerativeModel({ 
+      model: "gemini-2.0-flash",
+      systemInstruction: "Anda adalah Senior Performance Copywriter Indonesia yang ahli dalam psikologi pembeli. Gaya bahasa Anda santai, persuasif, 'to the point', dan SANGAT MANUSIAWI. Anda benci bahasa formal yang kaku dan klise AI. Anda selalu mematuhi batasan karakter Google Ads (Headline 30, Deskripsi 90).",
+    });
+
+    const toneInstruction = businessInfo.tone 
+      ? `Gunakan gaya bahasa: ${businessInfo.tone}.` 
+      : "Gunakan gaya bahasa: Santai dan Persuasif.";
+
+    const prompt = `
+      Riset dan buatlah kampanye Google Search Network (GSN) untuk bisnis berikut:
+      
+      Bisnis: ${businessInfo.name}
+      Deskripsi: ${businessInfo.description}
+      Target: ${businessInfo.audience}
+      ${businessInfo.url ? `URL: ${businessInfo.url}` : ""}
+      ${toneInstruction}
+
+      INSTRUKSI KHUSUS UNTUK COPYWRITING (SANGAT PENTING):
+      - JANGAN gunakan kata: "Solusi", "Terpercaya", "Tingkatkan", "Potensi", "Inovatif", "Modern".
+      - GUNAKAN kata-kata yang biasa dipakai manusia saat ngobrol: "Bikin", "Langsung", "Gak pake lama", "Hemat", "Cek sendiri".
+      - HEADLINE: MAKSIMAL 30 KARAKTER. Fokus pada "Pain Point" atau "Instant Benefit". Contoh: "Kopi Enak Gak Harus Mahal" daripada "Nikmati Kopi Berkualitas Tinggi".
+      - DESKRIPSI: MAKSIMAL 90 KARAKTER. Gunakan gaya bahasa bercerita atau testimoni singkat. Contoh: "Udah 500+ orang nyobain dan ketagihan. Cek menunya di sini!"
+      - KEYWORDS: Cari yang "High Intent" (misal: "beli kopi susu jakarta" bukan "apa itu kopi").
+      - SITELINKS: Buat 4 sitelinks yang relevan dengan judul menarik (max 25 char) dan deskripsi (max 35 char).
+
+      Format output harus JSON sesuai schema.
+    `;
+
+    const result = await model.generateContent({
+      contents: [{ role: "user", parts: [{ text: prompt }] }],
+      generationConfig: {
+        responseMimeType: "application/json",
+        responseSchema: {
+          type: "object" as any,
+          properties: {
+            keywords: {
+              type: "object" as any,
+              properties: {
+                broad: { type: "array" as any, items: { type: "string" as any } },
+                phrase: { type: "array" as any, items: { type: "string" as any } },
+                exact: { type: "array" as any, items: { type: "string" as any } },
+              },
+              required: ["broad", "phrase", "exact"],
+            },
+            headlines: { type: "array" as any, items: { type: "string" as any } },
+            descriptions: { type: "array" as any, items: { type: "string" as any } },
+            sitelinks: {
+              type: "array" as any,
+              items: {
+                type: "object" as any,
+                properties: {
+                  title: { type: "string" as any },
+                  description: { type: "string" as any },
+                },
+                required: ["title", "description"],
+              },
+            },
+          },
+          required: ["keywords", "headlines", "descriptions", "sitelinks"],
+        },
+      },
+    });
+
+    const response = await result.response;
+    res.json(JSON.parse(response.text()));
+  } catch (error: any) {
+    console.error("Gemini generation error:", error);
+    res.status(500).json({ error: error.message || "Failed to generate campaign" });
   }
 });
 
