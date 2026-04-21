@@ -23,8 +23,14 @@ export async function generateAdCampaign(
   },
   userApiKey?: string
 ): Promise<AdCampaign> {
+  const apiKey = userApiKey || process.env.GEMINI_API_KEY;
+
+  if (!apiKey) {
+    throw new Error("Gemini API Key tidak ditemukan. SIlakan masukkan API Key Anda di Pengaturan atau hubungi admin.");
+  }
+
   // Use the provided API key or the default one
-  const genAI = userApiKey ? new GoogleGenAI({ apiKey: userApiKey }) : ai;
+  const genAI = new GoogleGenAI({ apiKey });
 
   const toneInstruction = businessInfo.tone 
     ? `Gunakan gaya bahasa: ${businessInfo.tone}.` 
