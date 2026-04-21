@@ -382,7 +382,7 @@ export default function App() {
         ...result,
         id: campaignId,
         timestamp: Date.now(),
-        businessName: formData.name,
+        businessName: result.businessName || formData.name || 'Bisnis Saya',
         tone: formData.tone
       };
 
@@ -853,20 +853,8 @@ export default function App() {
               activeTab === 'dashboard' ? "bg-blue-600/10 text-blue-500" : "text-zinc-500 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-zinc-800"
             )}
           >
-            <LayoutDashboard className="w-5 h-5" />
-            Dashboard
-          </button>
-          <button 
-            onClick={connectGoogleAds}
-            className={cn(
-              "w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all font-bold text-sm",
-              isGoogleConnected 
-                ? "bg-green-500/10 text-green-500" 
-                : "text-zinc-500 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-zinc-800"
-            )}
-          >
-            <Globe className="w-5 h-5" />
-            {isGoogleConnected ? 'Google Ads Connected' : 'Connect Google Ads'}
+            <Plus className="w-5 h-5" />
+            Buat Iklan Baru
           </button>
           <button 
             onClick={() => {
@@ -880,19 +868,6 @@ export default function App() {
           >
             <History className="w-5 h-5" />
             Riwayat
-          </button>
-          <button 
-            onClick={() => {
-              setActiveTab('analytics');
-              setIsSidebarOpen(false);
-            }}
-            className={cn(
-              "w-full flex items-center gap-3 px-4 py-3 rounded-xl font-bold text-sm transition-all",
-              activeTab === 'analytics' ? "bg-blue-600/10 text-blue-500" : "text-zinc-500 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-zinc-800"
-            )}
-          >
-            <BarChart3 className="w-5 h-5" />
-            Analytics
           </button>
           <button 
             onClick={() => {
@@ -987,51 +962,38 @@ export default function App() {
                   
                   <div className="flex items-center gap-4 relative z-10">
                     <div className="w-12 h-12 bg-blue-600 rounded-2xl flex items-center justify-center shadow-lg shadow-blue-600/20">
-                      <Plus className="w-6 h-6 text-white" />
+                      <Sparkles className="w-6 h-6 text-white" />
                     </div>
                     <div>
-                      <h3 className="text-xl font-bold font-display tracking-tight">Buat Iklan</h3>
-                      <p className="text-xs text-zinc-500 font-medium">Input data produk Anda</p>
+                      <h3 className="text-xl font-bold font-display tracking-tight">Setup Iklan</h3>
+                      <p className="text-xs text-zinc-500 font-medium">Sat Set langsung jadi</p>
                     </div>
                   </div>
 
                   <form onSubmit={handleGenerate} className="space-y-6 relative z-10">
-                    <div className="space-y-2.5">
-                      <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest ml-1">Bisnis / Produk</label>
-                      <input
-                        type="text"
-                        required
-                        className="input-field"
-                        placeholder="Contoh: Kopi Kenangan"
-                        value={formData.name}
-                        onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                      />
-                    </div>
+                    <div className="space-y-4">
+                      <div className="space-y-2">
+                        <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest ml-1">Detail Produk / Bisnis</label>
+                        <textarea
+                          required
+                          rows={5}
+                          className="input-field resize-none"
+                          placeholder="Contoh: Jualan Sepatu Vans ORIGINAL, promo diskon 50% khusus minggu ini. Kirim dari Jakarta."
+                          value={formData.description}
+                          onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                        />
+                      </div>
 
-                    <div className="space-y-2.5">
-                      <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest ml-1">URL Website</label>
-                      <div className="flex items-center gap-3 w-full bg-white dark:bg-zinc-950/50 border border-zinc-200 dark:border-zinc-800 rounded-xl px-4 transition-all focus-within:ring-4 focus-within:ring-blue-500/10 focus-within:border-primary group/input">
-                        <Globe className="w-4 h-4 text-zinc-500 group-focus-within/input:text-blue-500 transition-colors shrink-0" />
+                      <div className="space-y-2">
+                        <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest ml-1">Website (Opsional)</label>
                         <input
-                          type="url"
-                          className="w-full bg-transparent py-3 outline-none text-zinc-900 dark:text-white placeholder:text-zinc-400 dark:placeholder:text-zinc-600 text-sm sm:text-base"
-                          placeholder="https://www.bisnisanda.com"
+                          type="text"
+                          className="input-field"
+                          placeholder="www.bisnisanda.com"
                           value={formData.url}
                           onChange={(e) => setFormData({ ...formData, url: e.target.value })}
                         />
                       </div>
-                    </div>
-
-                    <div className="space-y-2.5">
-                      <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest ml-1">Deskripsi & Promo</label>
-                      <textarea
-                        required
-                        rows={4}
-                        className="input-field resize-none"
-                        placeholder="Jelaskan keunggulan produk atau promo yang sedang berjalan..."
-                        value={formData.description}
-                        onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                      />
                     </div>
 
                     <div className="space-y-4">
@@ -1516,6 +1478,20 @@ export default function App() {
                         />
                       </div>
                     </div>
+
+                    <button 
+                      onClick={connectGoogleAds}
+                      className={cn(
+                        "w-full flex items-center justify-center gap-3 px-6 py-4 rounded-xl transition-all font-bold text-sm border-2",
+                        isGoogleConnected 
+                          ? "bg-green-500/5 border-green-500/20 text-green-500" 
+                          : "bg-zinc-900 dark:bg-white dark:text-zinc-900 border-zinc-900 dark:border-white hover:bg-zinc-800 dark:hover:bg-zinc-100 shadow-lg"
+                      )}
+                    >
+                      <Globe className="w-5 h-5" />
+                      {isGoogleConnected ? 'Google Ads Sudah Terhubung' : 'Hubungkan ke Google Ads'}
+                    </button>
+                    {!isGoogleConnected && <p className="text-[10px] text-zinc-500 text-center">Hubungkan untuk mempublish iklan langsung dari SatSet.AI</p>}
                   </div>
 
                   <div className="p-6 bg-blue-600/5 border border-blue-600/20 rounded-2xl space-y-3">

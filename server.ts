@@ -128,21 +128,24 @@ app.post("/api/generate", async (req, res) => {
 
     const genAI = new GoogleGenAI(apiKey);
     const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
-
-    const toneInstruction = businessInfo.tone 
-      ? `Gunakan gaya bahasa: ${businessInfo.tone}.` 
-      : "Gunakan gaya bahasa: Santai dan Persuasif.";
-
+    const businessName = businessInfo.name || "Bisnis Saya";
     const prompt = `
       Riset dan buatlah kampanye Google Search Network (GSN) untuk bisnis berikut:
-      Bisnis: ${businessInfo.name}
-      Deskripsi: ${businessInfo.description}
-      Target: ${businessInfo.audience}
+      Detail Bisnis: ${businessInfo.description}
       ${businessInfo.url ? `URL: ${businessInfo.url}` : ""}
-      ${toneInstruction}
+      Gaya Bahasa: ${businessInfo.tone || "Santai dan Persuasif"}
+      
+      TUGAS:
+      1. Tentukan Nama Bisnis dari detail di atas (jika tidak jelas, buat nama yang keren).
+      2. Buat riset kata kunci (Broad, Phrase, Exact).
+      3. Buat Headlines (Max 30 karakter).
+      4. Buat Descriptions (Max 90 karakter).
+      5. Buat Sitelinks.
+      
       Format output harus JSON murni.
       JSON SCHEMA:
       {
+        "businessName": string,
         "keywords": { "broad": string[], "phrase": string[], "exact": string[] },
         "headlines": string[],
         "descriptions": string[],

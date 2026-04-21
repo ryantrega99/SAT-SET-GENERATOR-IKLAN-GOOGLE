@@ -3,6 +3,7 @@ import { GoogleGenAI, Type } from "@google/genai";
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || "" });
 
 export interface AdCampaign {
+  businessName?: string;
   keywords: {
     broad: string[];
     phrase: string[];
