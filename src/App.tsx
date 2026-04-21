@@ -1755,10 +1755,11 @@ export default function App() {
                         onClick={async () => {
                           if (!user) return;
                           try {
+                            const trimmedCode = promoCode.trim().toUpperCase();
                             const res = await fetch('/api/pro/activate', {
                               method: 'POST',
                               headers: { 'Content-Type': 'application/json' },
-                              body: JSON.stringify({ code: promoCode })
+                              body: JSON.stringify({ code: trimmedCode })
                             });
                             const data = await res.json();
                             if (data.success) {
@@ -1778,10 +1779,11 @@ export default function App() {
                               }
                               setShowUpgradeModal(false);
                             } else {
-                              toast.error('Kode tidak valid');
+                              toast.error(data.message || 'Kode tidak valid');
                             }
-                          } catch (err) {
-                            toast.error('Terjadi kesalahan. Coba lagi.');
+                          } catch (err: any) {
+                            console.error('Activation error:', err);
+                            toast.error(`Kesalahan: ${err.message || 'Gagal menghubungi server'}`);
                           }
                         }}
                         className="px-6 bg-zinc-900 dark:bg-white dark:text-zinc-900 text-white font-bold rounded-xl text-xs uppercase tracking-widest hover:bg-zinc-800 transition-all shrink-0"

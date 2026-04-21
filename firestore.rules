@@ -16,9 +16,8 @@ service cloud.firestore {
     // 2. Validation Blueprints
     function isValidUser(data) {
       return data.email is string && data.email.size() > 3 && data.email.size() < 256
-        && data.isPro is bool
-        && data.generationCount is number
-        && data.generationCount >= 0
+        && (!('isPro' in data) || data.isPro is bool)
+        && (!('generationCount' in data) || (data.generationCount is number && data.generationCount >= 0))
         && (!('hasUsedDemoCode' in data) || data.hasUsedDemoCode is bool);
     }
 
